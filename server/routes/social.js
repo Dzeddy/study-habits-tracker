@@ -3,6 +3,7 @@ const router = express.Router();
 const User = require('../models/User');
 const StudySession = require('../models/StudySession');
 const auth = require('../middleware/auth');
+const mongoose = require('mongoose');
 
 // Send friend request
 router.post('/friend-request/:userId', auth, async (req, res) => {
@@ -11,7 +12,15 @@ router.post('/friend-request/:userId', auth, async (req, res) => {
       return res.status(400).json({ message: 'Cannot send friend request to yourself' });
     }
     
-    const recipient = await User.findById(req.params.userId);
+    let query = {};
+    
+    if (mongoose.Types.ObjectId.isValid(req.params.userId)) {
+      query._id = req.params.userId;
+    } else {
+      query.username = req.params.userId;
+    }
+    
+    const recipient = await User.findOne(query);
     
     if (!recipient) {
       return res.status(404).json({ message: 'User not found' });
@@ -125,7 +134,16 @@ router.get('/leaderboard', auth, async (req, res) => {
     
     // Get current user's friends
     const currentUser = await User.findById(req.user.id);
-    const friendIds = [...currentUser.friends, req.user.id];
+    
+    if (!currentUser) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    
+    // Convert friend IDs to ObjectIds to ensure proper matching
+    const friendIds = [
+      mongoose.Types.ObjectId(req.user.id),
+      ...currentUser.friends.map(id => mongoose.Types.ObjectId(id.toString()))
+    ];
     
     // Aggregate study time for each user
     const leaderboard = await StudySession.aggregate([

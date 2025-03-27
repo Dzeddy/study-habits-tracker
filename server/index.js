@@ -58,6 +58,14 @@ io.on('connection', (socket) => {
   });
 });
 
-// Start server
-const PORT = process.env.PORT || 5000;
-server.listen(PORT, () => console.log(`Server running on port ${PORT}`)); 
+// Export for testing purposes
+if (process.env.NODE_ENV === 'test') {
+  module.exports = { app, server, io };
+} else {
+  // Start server
+  const PORT = process.env.PORT || 5000;
+  server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+  
+  // Also export io for testing even in non-test environments
+  module.exports = { io };
+} 
