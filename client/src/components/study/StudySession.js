@@ -4,7 +4,7 @@ import { startStudySession, endStudySession, updateTimer } from '../../slices/st
 import { Box, Button, Container, Typography, TextField, MenuItem, Paper, Rating, CircularProgress, Chip, Stack } from '@mui/material';
 import { io } from 'socket.io-client';
 
-const SOCKET_URL = process.env.REACT_APP_SOCKET_URL || 'http://localhost:5000';
+const SOCKET_URL = process.env.REACT_APP_SOCKET_URL || 'http://localhost:5001';
 
 const subjects = [
   'Mathematics',
