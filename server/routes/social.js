@@ -6,6 +6,46 @@ const auth = require('../middleware/auth');
 const mongoose = require('mongoose');
 
 // Send friend request
+router.post('/friend-request', auth, async (req, res) => {
+  try {
+    const { username } = req.body;
+    
+    if (!username) {
+      return res.status(400).json({ message: 'Username is required' });
+    }
+    
+    const recipient = await User.findOne({ username });
+    
+    if (!recipient) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    
+    if (req.user.id === recipient._id.toString()) {
+      return res.status(400).json({ message: 'Cannot send friend request to yourself' });
+    }
+    
+    // Check if already friends
+    if (recipient.friends.includes(req.user.id)) {
+      return res.status(400).json({ message: 'Already friends with this user' });
+    }
+    
+    // Check if request already sent
+    if (recipient.friendRequests.includes(req.user.id)) {
+      return res.status(400).json({ message: 'Friend request already sent' });
+    }
+    
+    // Add to friend requests
+    recipient.friendRequests.push(req.user.id);
+    await recipient.save();
+    
+    res.json({ message: 'Friend request sent' });
+  } catch (error) {
+    console.error('Friend request error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Keep the old endpoint for backward compatibility
 router.post('/friend-request/:userId', auth, async (req, res) => {
   try {
     if (req.user.id === req.params.userId) {
@@ -141,8 +181,8 @@ router.get('/leaderboard', auth, async (req, res) => {
     
     // Convert friend IDs to ObjectIds to ensure proper matching
     const friendIds = [
-      mongoose.Types.ObjectId(req.user.id),
-      ...currentUser.friends.map(id => mongoose.Types.ObjectId(id.toString()))
+      new mongoose.Types.ObjectId(req.user.id),
+      ...currentUser.friends.map(id => new mongoose.Types.ObjectId(id.toString()))
     ];
     
     // Aggregate study time for each user
@@ -182,6 +222,48 @@ router.get('/leaderboard', auth, async (req, res) => {
     res.json(formattedLeaderboard);
   } catch (error) {
     console.error('Leaderboard error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Get friends' study sessions
+router.get('/friends-study-sessions', auth, async (req, res) => {
+  try {
+    // Get current user's friends
+    const currentUser = await User.findById(req.user.id);
+    
+    if (!currentUser) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    
+    // Convert friend IDs to ObjectIds to ensure proper matching
+    const friendIds = currentUser.friends.map(id => new mongoose.Types.ObjectId(id.toString()));
+    
+    if (friendIds.length === 0) {
+      return res.json([]);
+    }
+    
+    // Set date for recent sessions (last 7 days)
+    const recentDate = new Date();
+    recentDate.setDate(recentDate.getDate() - 7);
+    
+    // Get friends' study sessions
+    const friendsSessions = await StudySession.find({
+      user: { $in: friendIds },
+      $or: [
+        { isActive: true },
+        { 
+          endTime: { $gte: recentDate } 
+        }
+      ]
+    })
+    .sort({ updatedAt: -1 })
+    .limit(20)
+    .populate('user', 'username profilePicture');
+    
+    res.json(friendsSessions);
+  } catch (error) {
+    console.error('Get friends study sessions error:', error);
     res.status(500).json({ message: 'Server error' });
   }
 });

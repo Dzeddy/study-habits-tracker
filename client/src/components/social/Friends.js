@@ -17,15 +17,42 @@ const Friends = () => {
     dispatch(getFriendRequests());
   }, [dispatch]);
   
+  // Add a separate effect to refresh data when success message changes
+  useEffect(() => {
+    if (successMessage) {
+      dispatch(getFriends());
+      dispatch(getFriendRequests());
+      
+      // Clear the success message after a delay
+      const timer = setTimeout(() => {
+        dispatch(clearSuccessMessage());
+      }, 3000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [successMessage, dispatch]);
+  
   const handleSendRequest = () => {
     if (username.trim()) {
-      dispatch(sendFriendRequest(username));
-      setUsername('');
+      dispatch(sendFriendRequest(username.trim()))
+        .unwrap()
+        .then(() => {
+          setUsername('');
+        })
+        .catch((error) => {
+          // Error is already handled by the slice
+          console.error("Friend request error:", error);
+        });
     }
   };
   
   const handleAcceptRequest = (userId) => {
-    dispatch(acceptFriendRequest(userId));
+    dispatch(acceptFriendRequest(userId)).then((result) => {
+      if (!result.error) {
+        // Refresh friends list after successful acceptance
+        dispatch(getFriends());
+      }
+    });
   };
   
   const handleCloseSnackbar = () => {

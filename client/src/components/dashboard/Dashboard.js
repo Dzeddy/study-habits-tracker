@@ -1,8 +1,11 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { getStudySessions, calculateStats } from '../../slices/studySlice';
 import { Link } from 'react-router-dom';
-import { Container, Grid, Paper, Typography, Box, Button, CircularProgress, Divider } from '@mui/material';
+import { 
+  Container, Grid, Paper, Typography, Box, Button, CircularProgress, Divider,
+  Dialog, DialogTitle, DialogContent, DialogActions, Chip, List, ListItem, ListItemText
+} from '@mui/material';
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend } from 'recharts';
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82CA9D'];
@@ -11,6 +14,10 @@ const Dashboard = () => {
   const dispatch = useDispatch();
   const { user } = useSelector(state => state.auth);
   const { sessions, stats, loading, activeSession } = useSelector(state => state.study);
+  
+  // Add state for session detail dialog
+  const [selectedSession, setSelectedSession] = useState(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
   
   useEffect(() => {
     // Get sessions from the last 30 days
@@ -41,6 +48,23 @@ const Dashboard = () => {
     } else {
       return `${hours} hr ${mins} min`;
     }
+  };
+  
+  // Format date and time
+  const formatDateTime = (dateString) => {
+    const date = new Date(dateString);
+    return date.toLocaleString();
+  };
+  
+  // Handle opening the session detail dialog
+  const handleSessionClick = (session) => {
+    setSelectedSession(session);
+    setDialogOpen(true);
+  };
+  
+  // Handle closing the session detail dialog
+  const handleCloseDialog = () => {
+    setDialogOpen(false);
   };
   
   // Prepare data for pie chart
@@ -231,7 +255,15 @@ const Dashboard = () => {
                   </Box>
                   <Box sx={{ display: 'table-row-group' }}>
                     {sessions.slice(0, 5).map((session) => (
-                      <Box key={session._id} sx={{ display: 'table-row' }}>
+                      <Box 
+                        key={session._id} 
+                        sx={{ 
+                          display: 'table-row',
+                          cursor: 'pointer',
+                          '&:hover': { backgroundColor: 'rgba(0, 0, 0, 0.04)' }
+                        }}
+                        onClick={() => handleSessionClick(session)}
+                      >
                         <Typography sx={{ display: 'table-cell', p: 1 }}>{session.subject}</Typography>
                         <Typography sx={{ display: 'table-cell', p: 1 }}>
                           {new Date(session.startTime).toLocaleDateString()}
@@ -251,6 +283,127 @@ const Dashboard = () => {
           </Paper>
         </Grid>
       </Grid>
+      
+      {/* Session Detail Dialog */}
+      <Dialog 
+        open={dialogOpen} 
+        onClose={handleCloseDialog}
+        maxWidth="md"
+        fullWidth
+      >
+        {selectedSession && (
+          <>
+            <DialogTitle>
+              <Typography variant="h5">
+                Study Session Details
+              </Typography>
+            </DialogTitle>
+            <DialogContent dividers>
+              <Grid container spacing={2}>
+                <Grid item xs={12} md={6}>
+                  <List>
+                    <ListItem>
+                      <ListItemText 
+                        primary="Subject" 
+                        secondary={selectedSession.subject} 
+                        primaryTypographyProps={{ fontWeight: 'bold' }}
+                      />
+                    </ListItem>
+                    <ListItem>
+                      <ListItemText 
+                        primary="Start Time" 
+                        secondary={formatDateTime(selectedSession.startTime)} 
+                        primaryTypographyProps={{ fontWeight: 'bold' }}
+                      />
+                    </ListItem>
+                    <ListItem>
+                      <ListItemText 
+                        primary="End Time" 
+                        secondary={selectedSession.endTime ? formatDateTime(selectedSession.endTime) : 'Session Active'} 
+                        primaryTypographyProps={{ fontWeight: 'bold' }}
+                      />
+                    </ListItem>
+                    <ListItem>
+                      <ListItemText 
+                        primary="Duration" 
+                        secondary={formatTime(selectedSession.duration || 0)} 
+                        primaryTypographyProps={{ fontWeight: 'bold' }}
+                      />
+                    </ListItem>
+                  </List>
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <List>
+                    <ListItem>
+                      <ListItemText 
+                        primary="Status" 
+                        secondary={selectedSession.isActive ? 'Active' : 'Completed'} 
+                        primaryTypographyProps={{ fontWeight: 'bold' }}
+                      />
+                    </ListItem>
+                    <ListItem>
+                      <ListItemText 
+                        primary="Productivity Rating" 
+                        secondary={selectedSession.productivityRating ? `${selectedSession.productivityRating}/5` : 'Not Rated'} 
+                        primaryTypographyProps={{ fontWeight: 'bold' }}
+                      />
+                    </ListItem>
+                    <ListItem>
+                      <ListItemText 
+                        primary="Location" 
+                        secondary={selectedSession.location || 'Not specified'} 
+                        primaryTypographyProps={{ fontWeight: 'bold' }}
+                      />
+                    </ListItem>
+                    <ListItem>
+                      <ListItemText 
+                        primary="Tags" 
+                        secondary={
+                          selectedSession.tags && selectedSession.tags.length > 0 ? (
+                            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 1 }}>
+                              {selectedSession.tags.map((tag, index) => (
+                                <Chip key={index} label={tag} size="small" />
+                              ))}
+                            </Box>
+                          ) : 'No tags'
+                        } 
+                        primaryTypographyProps={{ fontWeight: 'bold' }}
+                      />
+                    </ListItem>
+                  </List>
+                </Grid>
+                
+                {selectedSession.notes && (
+                  <Grid item xs={12}>
+                    <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
+                      Notes:
+                    </Typography>
+                    <Paper variant="outlined" sx={{ p: 2, backgroundColor: 'rgba(0, 0, 0, 0.02)' }}>
+                      <Typography variant="body1">
+                        {selectedSession.notes}
+                      </Typography>
+                    </Paper>
+                  </Grid>
+                )}
+                
+                <Grid item xs={12}>
+                  <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
+                    Database Information:
+                  </Typography>
+                  <Paper variant="outlined" sx={{ p: 2, backgroundColor: 'rgba(0, 0, 0, 0.02)' }}>
+                    <Typography variant="body2" component="pre" sx={{ fontFamily: 'monospace', whiteSpace: 'pre-wrap' }}>
+                      {JSON.stringify(selectedSession, null, 2)}
+                    </Typography>
+                  </Paper>
+                </Grid>
+              </Grid>
+            </DialogContent>
+            <DialogActions>
+              <Button onClick={handleCloseDialog}>Close</Button>
+            </DialogActions>
+          </>
+        )}
+      </Dialog>
     </Container>
   );
 };

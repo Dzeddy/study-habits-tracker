@@ -94,7 +94,7 @@ const Leaderboard = () => {
                 <ListItem
                   alignItems="flex-start"
                   sx={{
-                    backgroundColor: entry.user._id === user?.id ? 'rgba(0, 0, 0, 0.04)' : 'transparent',
+                    backgroundColor: entry.user._id === user?._id ? 'rgba(0, 0, 0, 0.04)' : 'transparent',
                     borderRadius: 1
                   }}
                 >
@@ -125,8 +125,8 @@ const Leaderboard = () => {
                   
                   <ListItemText
                     primary={
-                      <Typography variant="body1" fontWeight={entry.user._id === user?.id ? 'bold' : 'normal'}>
-                        {entry.user.username} {entry.user._id === user?.id && '(You)'}
+                      <Typography variant="body1" fontWeight={entry.user._id === user?._id ? 'bold' : 'normal'}>
+                        {entry.user.username} {entry.user._id === user?._id && '(You)'}
                       </Typography>
                     }
                     secondary={
