@@ -110,6 +110,7 @@ const initialState = {
   stats: {
     totalTime: 0,
     averageRating: 0,
+    totalSessions: 0,
     subjectDistribution: {}
   }
 };
@@ -145,6 +146,9 @@ const studySlice = createSlice({
         );
         state.stats.averageRating = totalRating / ratedSessions.length;
       }
+      
+      // Calculate total number of sessions
+      state.stats.totalSessions = state.sessions.length;
       
       // Calculate subject distribution
       const subjectDistribution = {};

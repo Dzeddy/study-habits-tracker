@@ -62,7 +62,7 @@ export const getFriendRequests = createAsyncThunk(
 // Send friend request
 export const sendFriendRequest = createAsyncThunk(
   'social/sendFriendRequest',
-  async (userId, { rejectWithValue, getState }) => {
+  async (username, { rejectWithValue, getState }) => {
     try {
       const token = getState().auth.token;
       
@@ -77,12 +77,12 @@ export const sendFriendRequest = createAsyncThunk(
       };
       
       const response = await axios.post(
-        `${API_URL}/social/friend-request/${userId}`,
-        {},
+        `${API_URL}/social/friend-request`,
+        { username },
         config
       );
       
-      return { userId, message: response.data.message };
+      return { username, message: response.data.message };
     } catch (error) {
       return rejectWithValue(
         error.response?.data?.message || 'Failed to send friend request'
@@ -152,10 +152,39 @@ export const getLeaderboard = createAsyncThunk(
   }
 );
 
+// Get friends' study sessions
+export const getFriendsStudySessions = createAsyncThunk(
+  'social/getFriendsStudySessions',
+  async (_, { rejectWithValue, getState }) => {
+    try {
+      const token = getState().auth.token;
+      
+      if (!token) {
+        return rejectWithValue('No authentication token');
+      }
+      
+      const config = {
+        headers: {
+          'x-auth-token': token
+        }
+      };
+      
+      const response = await axios.get(`${API_URL}/social/friends-study-sessions`, config);
+      
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.message || 'Failed to fetch friends\' study sessions'
+      );
+    }
+  }
+);
+
 const initialState = {
   friends: [],
   friendRequests: [],
   leaderboard: [],
+  friendsStudySessions: [],
   loading: false,
   error: null,
   successMessage: null
@@ -241,6 +270,19 @@ const socialSlice = createSlice({
         state.leaderboard = action.payload;
       })
       .addCase(getLeaderboard.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+      // Get Friends' Study Sessions
+      .addCase(getFriendsStudySessions.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(getFriendsStudySessions.fulfilled, (state, action) => {
+        state.loading = false;
+        state.friendsStudySessions = action.payload;
+      })
+      .addCase(getFriendsStudySessions.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
       });
